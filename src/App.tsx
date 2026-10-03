@@ -14,18 +14,29 @@ function SectorOption({sector, indent}: { sector: Sector, indent: number }) {
     )
 }
 
-function ErrorMessage({render}: { render: boolean }) {
-    if (!render) {
-        return null
-    } else return <span className="error">Please fill all fields.</span>
+function ValidationErrorMessage({render}: { render: boolean }) {
+    if (!render) return null
+    else return <span className="error">Please fill all fields.</span>
+}
+
+function NetworkErrorMessage({render}: { render: boolean }) {
+    if (!render) return null
+    else return <span className="error">There seems to be an issue with the connection... Please try again.</span>
+}
+
+function EditMessage({render}: { render: boolean }) {
+    if (!render) return null
+    else return <span>Data saved! You can edit your entry during this session.</span>
 }
 
 function App() {
     const [sectors, setSectors] = useState<Sector[]>([])
-    const [name, setName] = useState('')
-    const [agreeTerms, setAgreeTerms] = useState(false)
+    const [name, setName] = useState<string>('')
+    const [agreeTerms, setAgreeTerms] = useState<boolean>(false)
     const [selectedSectors, setSelectedSectors] = useState<string[]>([])
-    const [showError, setShowError] = useState<boolean>(false)
+    const [showValidationError, setShowValidationError] = useState<boolean>(false)
+    const [showNetworkError, setShowNetworkError] = useState<boolean>(false)
+    const [userId, setUserId] = useState<number | null>(null)
 
     useEffect(() => {
         fetch('http://localhost:8080/sectors')
@@ -36,18 +47,24 @@ function App() {
     function PostData(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
 
+        setShowNetworkError(false)
+
         if (name === '' || selectedSectors.length === 0 || !agreeTerms) {
-            setShowError(true)
+            setShowValidationError(true)
             return
 
         }
-        const payload: UserEntryRequest = {name, sectorIds: selectedSectors, agreeTerms}
+        const payload: UserEntryRequest = {id: userId, name, sectorIds: selectedSectors, agreeTerms}
 
         fetch('http://localhost:8080/userData', {
-            method: 'POST',
+            method: userId === null ? 'POST' : 'PATCH',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(payload),
-        })
+        }).then(res => res.json()).then(data => setUserId(data.id))
+            .catch(err => {
+                console.log(err)
+                setShowNetworkError(true)
+            })
     }
 
     return (
@@ -57,7 +74,10 @@ function App() {
             Please enter your name and pick the Sectors you are currently involved in.
             <br/>
 
-            <ErrorMessage render={showError}/>
+            <EditMessage render={userId !== null}/>
+
+            <ValidationErrorMessage render={showValidationError}/>
+            <NetworkErrorMessage render={showNetworkError}/>
 
             <br/>
             <form onSubmit={PostData}>
@@ -67,7 +87,7 @@ function App() {
                     placeholder="Name"
                     value={name}
                     onChange={(e) => {
-                        setShowError(false)
+                        setShowValidationError(false)
                         setName(e.target.value)
                     }}
                 />
@@ -79,7 +99,7 @@ function App() {
                     size={5}
                     value={selectedSectors}
                     onChange={(e) => {
-                        setShowError(false)
+                        setShowValidationError(false)
                         setSelectedSectors(Array.from(e.target.selectedOptions, (option) => option.value))
                     }}
                 >
@@ -95,7 +115,7 @@ function App() {
                         type="checkbox"
                         checked={agreeTerms}
                         onChange={(e) => {
-                            setShowError(false)
+                            setShowValidationError(false)
                             setAgreeTerms(e.target.checked)
                         }}
                     />
