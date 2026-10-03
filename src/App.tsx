@@ -1,63 +1,112 @@
-import {useEffect, useState} from 'react'
+import {useEffect, useState, type SubmitEvent} from 'react'
 import './App.css'
 import type {Sector} from "./types/Sector.ts";
+import type {UserEntryRequest} from "./types/UserEntryRequest.ts";
 
+function SectorOption({sector, indent}: { sector: Sector, indent: number }) {
+    return (
+        <>
+            <option value={sector.id}>{"\u00A0\u00A0\u00A0\u00A0".repeat(indent)}{sector.name}</option>
+            {sector.children.map((childSector: Sector) => (
+                <SectorOption sector={childSector} indent={indent + 1}/>
+            ))}
+        </>
+    )
+}
 
-function Sector({sector, indent}: {sector: Sector, indent: number}) {
-  return (
-      <>
-      <option value={sector.id}>{"\u00A0\u00A0\u00A0\u00A0".repeat(indent)}{sector.name}</option>
-      {sector.children.map((childSector: Sector) => (
-          <Sector sector={childSector} indent={indent + 1}/>
-      ))}
-      </>
-  )
+function ErrorMessage({render}: { render: boolean }) {
+    if (!render) {
+        return null
+    } else return <span className="error">Please fill all fields.</span>
 }
 
 function App() {
-  const [sectors, setSectors] = useState<Sector[]>([])
+    const [sectors, setSectors] = useState<Sector[]>([])
+    const [name, setName] = useState('')
+    const [agreeTerms, setAgreeTerms] = useState(false)
+    const [selectedSectors, setSelectedSectors] = useState<string[]>([])
+    const [showError, setShowError] = useState<boolean>(false)
 
-  useEffect(() => {
-    fetch('http://localhost:8080/sectors')
-        .then(res => res.json() as Promise<Sector[]>)
-        .then(data => setSectors(data))
-  }, [])
+    useEffect(() => {
+        fetch('http://localhost:8080/sectors')
+            .then(res => res.json() as Promise<Sector[]>)
+            .then(data => setSectors(data))
+    }, [])
 
+    function PostData(event: SubmitEvent<HTMLFormElement>) {
+        event.preventDefault()
 
+        if (name === '' || selectedSectors.length === 0 || !agreeTerms) {
+            setShowError(true)
+            return
 
+        }
+        const payload: UserEntryRequest = {name, sectorIds: selectedSectors, agreeTerms}
 
-  return (
-    <>
-      <section id="spacer"></section>
+        fetch('http://localhost:8080/userData', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload),
+        })
+    }
 
-      Please enter your name and pick the Sectors you are currently involved in.
+    return (
+        <>
+            <section id="spacer"></section>
 
-      <br/>
-        <form onSubmit={}>
-          Name:
-          <input type="text" placeholder="Name"/>
-          <br/>
+            Please enter your name and pick the Sectors you are currently involved in.
+            <br/>
 
-          Sectors:
-          <select multiple size={5}>
-            {sectors?.map((sector) => (
-                <Sector sector={sector} indent={0}/>
+            <ErrorMessage render={showError}/>
 
-            ))}
-          </select>
+            <br/>
+            <form onSubmit={PostData}>
+                Name:
+                <input
+                    type="text"
+                    placeholder="Name"
+                    value={name}
+                    onChange={(e) => {
+                        setShowError(false)
+                        setName(e.target.value)
+                    }}
+                />
+                <br/>
 
-          <br/>
-          <div>
-            Agree to terms
-            <input type="checkbox"/>
-          </div>
+                Sectors:
+                <select
+                    multiple
+                    size={5}
+                    value={selectedSectors}
+                    onChange={(e) => {
+                        setShowError(false)
+                        setSelectedSectors(Array.from(e.target.selectedOptions, (option) => option.value))
+                    }}
+                >
+                    {sectors?.map((sector) => (
+                        <SectorOption sector={sector} indent={0}/>
+                    ))}
+                </select>
 
-          <input type="submit" value="Save"/>
-        </form>
+                <br/>
+                <div>
+                    Agree to terms
+                    <input
+                        type="checkbox"
+                        checked={agreeTerms}
+                        onChange={(e) => {
+                            setShowError(false)
+                            setAgreeTerms(e.target.checked)
+                        }}
+                    />
+                </div>
 
-      <section id="spacer"></section>
-    </>
-  )
+                <input type="submit" value="Save"/>
+            </form>
+
+            <section id="spacer"></section>
+        </>
+    )
 }
 
 export default App
