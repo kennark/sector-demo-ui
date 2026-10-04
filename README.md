@@ -1,3 +1,13 @@
+# Sector UI demo
+
+To run the development environment:   
+`npm install` & `npm run dev`  
+This will expose the UI on http://localhost:5173/
+
+
+*----- template readme below -----*
+
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
