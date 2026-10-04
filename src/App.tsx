@@ -1,33 +1,11 @@
-import {useEffect, useState, type SubmitEvent} from 'react'
+import {type SubmitEvent, useEffect, useState} from 'react'
 import './App.css'
 import type {Sector} from "./types/Sector.ts";
 import type {UserEntryRequest} from "./types/UserEntryRequest.ts";
-
-function SectorOption({sector, indent}: { sector: Sector, indent: number }) {
-    return (
-        <>
-            <option value={sector.id}>{"\u00A0\u00A0\u00A0\u00A0".repeat(indent)}{sector.name}</option>
-            {sector.children.map((childSector: Sector) => (
-                <SectorOption sector={childSector} indent={indent + 1}/>
-            ))}
-        </>
-    )
-}
-
-function ValidationErrorMessage({render}: { render: boolean }) {
-    if (!render) return null
-    else return <span className="error">Please fill all fields.</span>
-}
-
-function NetworkErrorMessage({render}: { render: boolean }) {
-    if (!render) return null
-    else return <span className="error">There seems to be an issue with the connection... Please try again.</span>
-}
-
-function EditMessage({render}: { render: boolean }) {
-    if (!render) return null
-    else return <span>Data saved! You can edit your entry during this session.</span>
-}
+import {ValidationErrorMessage} from "./components/messages/ValidationErrorMessage.tsx";
+import {NetworkErrorMessage} from "./components/messages/NetworkErrorMessage.tsx";
+import {EditMessage} from "./components/messages/EditMessage.tsx";
+import {SectorSelectionList} from "./components/SectorSelectionList.tsx";
 
 function App() {
     const [sectors, setSectors] = useState<Sector[]>([])
@@ -94,19 +72,12 @@ function App() {
                 <br/>
 
                 Sectors:
-                <select
-                    multiple
-                    size={5}
-                    value={selectedSectors}
-                    onChange={(e) => {
-                        setShowValidationError(false)
-                        setSelectedSectors(Array.from(e.target.selectedOptions, (option) => option.value))
-                    }}
-                >
-                    {sectors?.map((sector) => (
-                        <SectorOption sector={sector} indent={0}/>
-                    ))}
-                </select>
+                <SectorSelectionList
+                    selectedSectors={selectedSectors}
+                    setShowValidationError={setShowValidationError}
+                    setSelectedSectors={setSelectedSectors}
+                    sectors={sectors}
+                />
 
                 <br/>
                 <div>
